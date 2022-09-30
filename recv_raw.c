@@ -16,16 +16,23 @@
 #define PROTO_LABREDES  0xFD
 #define PROTO_UDP   17
 #define DST_PORT    8000
+
+
 typedef struct{
   char *name;
   uint8_t ip_address[4];
   int timer;
 }tableItem;
-enum packege_enum {STAR=0, HEART=1, TALK=2} packages;
+
+
+enum packeges {START=0, HEART=1, TALK=2};
+
 char this_mac[6];
 char bcast_mac[6] = {0xff, 0xff, 0xff, 0xff, 0xff, 0xff};
 char dst_mac[6] =   {0x00, 0x00, 0x00, 0xaa, 0x00, 0x01};
 char src_mac[6] =   {0x00, 0x00, 0x00, 0xaa, 0x00, 0x00};
+
+
 tableItem table[100];
 int size;
 /*
@@ -95,12 +102,23 @@ void readPackets()
         numbytes = recvfrom(sockfd, raw_buffer, ETH_LEN, 0, NULL, NULL);
         if (raw->ethernet.eth_type == ntohs(ETH_P_IP)){
             if (raw->ip.proto == PROTO_LABREDES){
-            //    if(HEART_BEAT || START) {
-            //         add in table
-            //    }
-            //    else if(TALK){
-            //         print talk msg
-            //    }
+                
+                printf("\n\naqui\n\n");
+                if(raw->heartbeat.func_id == START) {
+                    printf("\n\naqui2\n\n");
+                    // char *c = raw->heartbeat.name;
+                    printf("Received START from %s", raw->heartbeat.name);
+                }
+                else if(raw->heartbeat.func_id == HEART){
+                    printf("Received HEARTBEAT from %s", raw->heartbeat.name);
+                }
+                else if(TALK){
+                    printf("Received TALK from %s", raw->heartbeat.name);
+                }
+                else{
+                    printf("receive func %d", raw->heartbeat.func_id);
+                }
+
                 p = (char *)&raw->udp + ntohs(raw->udp.udp_len);
                 *p = '\0';
                 printf("\nsrc port: %d dst port: %d size: %d msg: %s\n",
@@ -142,27 +160,23 @@ int main(int argc, char *argv[]){
         if(input == 1){
             show_table(table, size);
         }
-    //    switch(input) {
-    //     case 1:
-    //         show_table(table, &size);
-    //     break;
-    //     case 2:
-    //         int dest_id;
-    //         printf("Destination id: ");
-    //         scanf("%d", &dest_id);
-    //        char *msg;
-    //         printf("Message: ");
-    //         gets(msg);
-    //         send_package(2,*msg);
-    //     break;
-    //    }
-        //HEARTBEAT
-    //    send_package(1,"");
+        else if(input == 2){
+            int dest_id;
+            printf("Destination id: ");
+            scanf("%d", &dest_id);
+
+            char *msg;
+            printf("Message: ");
+            scanf("%s", msg);
+            
+            break;
+        }
     }
     return 0;
 }
 
-int send_package(int packege_type, char *msg)
+
+int send_package(int packege_type, char *msg, uint8_t destination[4])
 {
     struct ifreq if_idx, if_mac, ifopts;
     char ifName[IFNAMSIZ];
@@ -216,7 +230,7 @@ int send_package(int packege_type, char *msg)
     raw->ip.ttl = 50;
     raw->ip.proto = 0xFD;
     raw->ip.sum = htons(0x0000);
-    uint8_t destination[4] =  {172,20,255,255};//{10,130,255,255};
+    // uint8_t destination[4] =  {172,20,255,255};//{10,130,255,255};
     memcpy(raw->ip.dst, destination,4);
     //raw->ethernet.eth_type = 25;
     /* fill source and destination addresses */
@@ -231,13 +245,3 @@ int send_package(int packege_type, char *msg)
 
     return 0;
 }
-// int main(int argc, char *argv[])
-// {
-//  pthread_create(control, NULL, NULL, NULL);
-//  while(true) {
-//      printf("Infome uma opcao");
-//      scanf("%s");
-//      // list_table()
-//      // send_talk();
-//  }
-// }

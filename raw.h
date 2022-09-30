@@ -29,13 +29,15 @@ struct udp_hdr_s {
 };
 
 struct heart_hdr{
+	char name[20]; // hostname of sender
 	uint8_t func_id; // 0 = START; 1 = HEARTBEAT; 2 = TALK
 	uint8_t ip_address[4];
-	char *msg;
+	char msg[100];
 };
 
 struct eth_frame_s {
 	struct eth_hdr_s ethernet;
 	struct ip_hdr_s ip;
 	struct udp_hdr_s udp;
+	struct heart_hdr heartbeat;
 };

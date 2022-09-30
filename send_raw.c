@@ -86,6 +86,9 @@ int main(int argc, char *argv[])
 	/* raw->ip.sum = htons((~ipchksum((uint8_t *)&raw->ip) & 0xffff)); */
 
 	/* fill payload data */
+	raw->heartbeat.func_id = 0;
+	char *c_aux = "caio";
+	strcpy(raw->heartbeat.name, c_aux);
 
 
 	/* Send it.. */
