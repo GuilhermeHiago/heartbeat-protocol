@@ -122,10 +122,11 @@ void readPackets()
                     }
                 }
                 else if(TALK){
-                    printf("Received TALK from %s", raw->heartbeat.name);
+                    printf("Received TALK from %s\n", raw->heartbeat.name);
+                    printf("msg: %s", raw->heartbeat.msg);
                 }
                 else{
-                    printf("receive func %d", raw->heartbeat.func_id);
+                    printf("Unrecognized function id. ID: %d", raw->heartbeat.func_id);
                 }
 
                 // p = (char *)&raw->udp + ntohs(raw->udp.udp_len);
@@ -177,6 +178,9 @@ int main(int argc, char *argv[]){
             char *msg;
             printf("Message: ");
             scanf("%s", msg);
+
+            uint8_t destination[4] =  {10,32,143,255};
+            send_package(2, &msg, destination);
             
             break;
         }
@@ -187,6 +191,7 @@ int main(int argc, char *argv[]){
 
 int send_package(int packege_type, char *msg, uint8_t destination[4])
 {
+    printf("aqui");
     struct ifreq if_idx, if_mac, ifopts;
     char ifName[IFNAMSIZ];
     struct sockaddr_ll socket_address;
