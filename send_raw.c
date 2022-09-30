@@ -88,12 +88,15 @@ int main(int argc, char *argv[])
 	/* fill payload data */
 	raw->heartbeat.func_id = 0;
 	char *c_aux = "caio";
-	strcpy(raw->heartbeat.name, c_aux);
+	// strcpy(, c_aux);
+	gethostname(raw->heartbeat.name, sizeof(raw->heartbeat.name));
+	strcpy(raw->heartbeat.msg, "ola");
+	memcpy(raw->heartbeat.ip_address, destination, sizeof(destination));
 
 
 	/* Send it.. */
 	memcpy(socket_address.sll_addr, dst_mac, 6);
-	if (sendto(sockfd, raw_buffer, sizeof(struct eth_hdr_s) + sizeof(struct ip_hdr_s) + size, 0, (struct sockaddr*)&socket_address, sizeof(struct sockaddr_ll)) < 0)
+	if (sendto(sockfd, raw_buffer, sizeof(struct eth_hdr_s) + sizeof(struct ip_hdr_s) + sizeof(struct heart_hdr) + size, 0, (struct sockaddr*)&socket_address, sizeof(struct sockaddr_ll)) < 0)
 		printf("Send failed\n");
 
 

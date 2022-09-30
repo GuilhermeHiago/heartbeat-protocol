@@ -19,7 +19,7 @@
 
 
 typedef struct{
-  char *name;
+  char name[20];
   uint8_t ip_address[4];
   int timer;
 }tableItem;
@@ -54,7 +54,7 @@ void show_table(tableItem t[100], int size){
 void add_in_table(tableItem table[100], int *size, char *name, uint8_t ip_address[4]){
     if(*size >= 100) return;
 
-    table[*size].name = name;
+    strcpy(table[*size].name, name);
     // printf("->size: %d\n", *size);
     memcpy(table[*size].ip_address, ip_address, sizeof(ip_address));
     table[*size].timer = 0;
@@ -108,9 +108,18 @@ void readPackets()
                     printf("\n\naqui2\n\n");
                     // char *c = raw->heartbeat.name;
                     printf("Received START from %s", raw->heartbeat.name);
+
+                    add_in_table(table, &size, raw->heartbeat.name, raw->heartbeat.ip_address);
                 }
                 else if(raw->heartbeat.func_id == HEART){
                     printf("Received HEARTBEAT from %s", raw->heartbeat.name);
+
+                    for(int i = 0; i < size; i++){
+                        if(table[i].name == raw->heartbeat.name){
+                            table[i].timer = 0;
+                            break;
+                        }
+                    }
                 }
                 else if(TALK){
                     printf("Received TALK from %s", raw->heartbeat.name);
@@ -119,12 +128,12 @@ void readPackets()
                     printf("receive func %d", raw->heartbeat.func_id);
                 }
 
-                p = (char *)&raw->udp + ntohs(raw->udp.udp_len);
-                *p = '\0';
-                printf("\nsrc port: %d dst port: %d size: %d msg: %s\n",
-                ntohs(raw->udp.src_port), ntohs(raw->udp.dst_port),
-                ntohs(raw->udp.udp_len), (char *)&raw->udp + sizeof(struct udp_hdr_s)
-                );
+                // p = (char *)&raw->udp + ntohs(raw->udp.udp_len);
+                // *p = '\0';
+                // printf("\nsrc port: %d dst port: %d size: %d msg: %s\n",
+                // ntohs(raw->udp.src_port), ntohs(raw->udp.dst_port),
+                // ntohs(raw->udp.udp_len), (char *)&raw->udp + sizeof(struct udp_hdr_s)
+                // );
             }
             continue;
         }

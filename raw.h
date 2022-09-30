@@ -21,12 +21,12 @@ struct ip_hdr_s {
 	uint8_t dst[4];			/* destination address */
 };
 
-struct udp_hdr_s {
-	uint16_t src_port;
-	uint16_t dst_port;
-	uint16_t udp_len;
-	uint16_t udp_chksum;
-};
+// struct udp_hdr_s {
+// 	uint16_t src_port;
+// 	uint16_t dst_port;
+// 	uint16_t udp_len;
+// 	uint16_t udp_chksum;
+// };
 
 struct heart_hdr{
 	char name[20]; // hostname of sender
@@ -38,6 +38,6 @@ struct heart_hdr{
 struct eth_frame_s {
 	struct eth_hdr_s ethernet;
 	struct ip_hdr_s ip;
-	struct udp_hdr_s udp;
+	// struct udp_hdr_s udp;
 	struct heart_hdr heartbeat;
 };
