@@ -123,7 +123,7 @@ void readPackets()
                 }
                 else if(TALK){
                     printf("Received TALK from %s\n", raw->heartbeat.name);
-                    printf("msg: %s", raw->heartbeat.msg);
+                    printf("msg: %s\n", raw->heartbeat.msg);
                 }
                 else{
                     printf("Unrecognized function id. ID: %d", raw->heartbeat.func_id);
@@ -164,6 +164,7 @@ int main(int argc, char *argv[]){
     while(1){
         printf("1. List connection table\n");
         printf("2. Send Talk\n");
+        printf("3. Exit\n");
         printf("Number: ");
         scanf("%d", &input);
 
@@ -175,13 +176,14 @@ int main(int argc, char *argv[]){
             printf("Destination id: ");
             scanf("%d", &dest_id);
 
-            char *msg;
+            char msg[20];
             printf("Message: ");
             scanf("%s", msg);
 
-            uint8_t destination[4] =  {10,32,143,255};
-            send_package(2, &msg, destination);
-            
+            uint8_t destination[4] =  {127,0,0,1};//{10,32,143,255};
+            send_package(2, msg, destination);
+        }
+        else if(input == 3){
             break;
         }
     }
@@ -189,16 +191,14 @@ int main(int argc, char *argv[]){
 }
 
 
-int send_package(int packege_type, char *msg, uint8_t destination[4])
+int send_package(int packege_type, char msg[100], uint8_t destination[4])
 {
-    printf("aqui");
     struct ifreq if_idx, if_mac, ifopts;
-    char ifName[IFNAMSIZ];
     struct sockaddr_ll socket_address;
     int sockfd, numbytes, size = 100;
 
-    uint8_t raw_buffer[ETH_LEN];
-    struct eth_frame_s *raw = (struct eth_frame_s *)&raw_buffer;
+    // uint8_t raw_buffer[ETH_LEN];
+    // struct eth_frame_s *raw = (struct eth_frame_s *)&raw_buffer;
 
     /* Open RAW socket */
     if ((sockfd = socket(AF_PACKET, SOCK_RAW, htons(ETH_P_ALL))) == -1)
@@ -253,6 +253,11 @@ int send_package(int packege_type, char *msg, uint8_t destination[4])
     /* fill payload data */
     /* Send it.. */
     memcpy(socket_address.sll_addr, dst_mac, 6);
+
+    //header of heartbeat protocol
+    gethostname(raw->heartbeat.name, sizeof(raw->heartbeat.name));
+	strcpy(raw->heartbeat.msg, msg);
+	memcpy(raw->heartbeat.ip_address, destination, sizeof(destination));
 
     if (sendto(sockfd, raw_buffer, sizeof(struct eth_hdr_s) + sizeof(struct ip_hdr_s) + size, 0, (struct sockaddr*)&socket_address, sizeof(struct sockaddr_ll)) < 0)
         printf("Send failed\n");
