@@ -51,7 +51,7 @@ void show_table(tableItem t[100], int size){
 }
 
 
-void add_in_table(tableItem table[100], int *size, char *name, uint8_t ip_address[4]){
+void add_in_table(tableItem table[100], int *size, char name[20], uint8_t ip_address[4]){
     if(*size >= 100) return;
 
     strcpy(table[*size].name, name);
@@ -85,6 +85,34 @@ char *p;
 uint8_t raw_buffer[ETH_LEN];
 struct eth_frame_s *raw = (struct eth_frame_s *)&raw_buffer;
 
+
+void updateHeartBeat(tableItem table[100], int *size, char name[10], uint8_t ip_address[4]){
+    for(int i = 0; i < *size; i++){
+        printf("size: %d i: %d\n", *size, i);
+        if(strcmp(table[i].name, name) == 0){
+            printf("igual %s %s", table[i].name, name);
+            table[i].timer = 0;
+            return;
+        }
+        else if(i == *size-1){
+            add_in_table(table, size, name, ip_address);
+        }
+        else{
+            printf("diferente %s %s", table[i].name, name);
+        }
+    }
+}
+
+
+void heartBeatThread(){
+    while(1){
+        uint8_t destination[4] =  {127,0,0,1};
+        send_package(1, "beat", destination);
+
+        sleep(5);
+    }
+}
+
 void readPackets()
 {
     /* Open RAW socket */
@@ -104,23 +132,24 @@ void readPackets()
             if (raw->ip.proto == PROTO_LABREDES){
                 
                 printf("\n\naqui\n\n");
-                if(raw->heartbeat.func_id == START) {
+                if(raw->heartbeat.func_id == START || raw->heartbeat.func_id == HEART) {
                     printf("\n\naqui2\n\n");
                     // char *c = raw->heartbeat.name;
                     printf("Received START from %s", raw->heartbeat.name);
 
-                    add_in_table(table, &size, raw->heartbeat.name, raw->heartbeat.ip_address);
+                    //add_in_table(table, &size, raw->heartbeat.name, raw->heartbeat.ip_address);
+                    updateHeartBeat(table, &size, raw->heartbeat.name, raw->heartbeat.ip_address);
                 }
-                else if(raw->heartbeat.func_id == HEART){
-                    printf("Received HEARTBEAT from %s", raw->heartbeat.name);
+                //else if(raw->heartbeat.func_id == HEART){
+                //    printf("Received HEARTBEAT from %s", raw->heartbeat.name);
 
-                    for(int i = 0; i < size; i++){
-                        if(table[i].name == raw->heartbeat.name){
-                            table[i].timer = 0;
-                            break;
-                        }
-                    }
-                }
+                 //   for(int i = 0; i < size; i++){
+                //        if(table[i].name == raw->heartbeat.name){
+                //            table[i].timer = 0;
+                //            break;
+                 //       }
+                 //   }
+                //}
                 else if(TALK){
                     printf("Received TALK from %s\n", raw->heartbeat.name);
                     printf("msg: %s\n", raw->heartbeat.msg);
@@ -157,8 +186,15 @@ int main(int argc, char *argv[]){
     add_in_table(table, &size, "pc", adr);
     // table[0].timer = 10;
 
+    // send START
+    uint8_t destination[4] =  {127,0,0,1};
+    send_package(0, "beat", destination);
+
     pthread_t tid;
     pthread_create(&tid, NULL, readPackets, (void *)&tid);
+
+    pthread_t tid2;
+    pthread_create(&tid2, NULL, heartBeatThread, (void *)&tid2);
     
     int input;
     while(1){
@@ -255,6 +291,7 @@ int send_package(int packege_type, char msg[100], uint8_t destination[4])
     memcpy(socket_address.sll_addr, dst_mac, 6);
 
     //header of heartbeat protocol
+    raw->heartbeat.func_id = packege_type;
     gethostname(raw->heartbeat.name, sizeof(raw->heartbeat.name));
 	strcpy(raw->heartbeat.msg, msg);
 	memcpy(raw->heartbeat.ip_address, destination, sizeof(destination));
