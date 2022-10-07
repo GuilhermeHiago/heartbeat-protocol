@@ -32,6 +32,9 @@ char bcast_mac[6] = {0xff, 0xff, 0xff, 0xff, 0xff, 0xff};
 char dst_mac[6] =   {0x00, 0x00, 0x00, 0xaa, 0x00, 0x01};
 char src_mac[6] =   {0x00, 0x00, 0x00, 0xaa, 0x00, 0x00};
 
+uint8_t broadcast_address[4] = {255, 255, 255, 255};
+
+int send_package(uint8_t packege_type, char msg[100], uint8_t destination[4]);
 
 tableItem table[100];
 int size;
@@ -51,7 +54,7 @@ void show_table(tableItem t[100], int size){
 }
 
 
-void add_in_table(tableItem table[100], int *size, char name[20], uint8_t ip_address[4]){
+void add_in_table(tableItem table[100], int *size, char *name, uint8_t ip_address[4]){
     if(*size >= 100) return;
 
     strcpy(table[*size].name, name);
@@ -85,31 +88,19 @@ char *p;
 uint8_t raw_buffer[ETH_LEN];
 struct eth_frame_s *raw = (struct eth_frame_s *)&raw_buffer;
 
-
-void updateHeartBeat(tableItem table[100], int *size, char name[10], uint8_t ip_address[4]){
-    for(int i = 0; i < *size; i++){
-        printf("size: %d i: %d\n", *size, i);
-        if(strcmp(table[i].name, name) == 0){
-            printf("igual %s %s", table[i].name, name);
-            table[i].timer = 0;
-            return;
-        }
-        else if(i == *size-1){
-            add_in_table(table, size, name, ip_address);
-        }
-        else{
-            printf("diferente %s %s", table[i].name, name);
-        }
-    }
-}
-
-
 void heartBeatThread(){
     while(1){
-        uint8_t destination[4] =  {127,0,0,1};
-        send_package(1, "beat", destination);
-
         sleep(5);
+
+        send_package(1, "beat", broadcast_address);
+
+        for(int i = 0; i < size; i++){
+            table[i].timer += 5;
+
+            if(table[i].timer >= 15){
+                remove_of_table_by_pos(table, &size, i);
+            }
+        }
     }
 }
 
@@ -131,25 +122,29 @@ void readPackets()
         if (raw->ethernet.eth_type == ntohs(ETH_P_IP)){
             if (raw->ip.proto == PROTO_LABREDES){
                 
-                printf("\n\naqui\n\n");
-                if(raw->heartbeat.func_id == START || raw->heartbeat.func_id == HEART) {
-                    printf("\n\naqui2\n\n");
+                // printf("\n\naqui\n\n");
+                if(raw->heartbeat.func_id == START) {
+                    // printf("\n\naqui2\n\n");
                     // char *c = raw->heartbeat.name;
                     printf("Received START from %s", raw->heartbeat.name);
 
-                    //add_in_table(table, &size, raw->heartbeat.name, raw->heartbeat.ip_address);
-                    updateHeartBeat(table, &size, raw->heartbeat.name, raw->heartbeat.ip_address);
+                    add_in_table(table, &size, raw->heartbeat.name, raw->heartbeat.ip_address);
                 }
-                //else if(raw->heartbeat.func_id == HEART){
-                //    printf("Received HEARTBEAT from %s", raw->heartbeat.name);
+                else if(raw->heartbeat.func_id == HEART){
+                    // printf("Received HEARTBEAT from %s", raw->heartbeat.name);
 
-                 //   for(int i = 0; i < size; i++){
-                //        if(table[i].name == raw->heartbeat.name){
-                //            table[i].timer = 0;
-                //            break;
-                 //       }
-                 //   }
-                //}
+                    for(int i = 0; i < size; i++){
+                        if(strcmp(table[i].name, raw->heartbeat.name) == 0){
+                            table[i].timer = 0;
+                            break;
+                        }
+                        else if(i == size-1){
+                            printf("adding");
+                            add_in_table(table, &size, raw->heartbeat.name, raw->heartbeat.ip_address);
+                            break;
+                        }
+                    }
+                }
                 else if(TALK){
                     printf("Received TALK from %s\n", raw->heartbeat.name);
                     printf("msg: %s\n", raw->heartbeat.msg);
@@ -183,12 +178,11 @@ int main(int argc, char *argv[]){
 
     uint8_t adr[4] = {10,10,10,10};
 
-    add_in_table(table, &size, "pc", adr);
+    add_in_table(table, &size, "pc123", adr);
     // table[0].timer = 10;
 
     // send START
-    uint8_t destination[4] =  {127,0,0,1};
-    send_package(0, "beat", destination);
+    send_package(0, "START", broadcast_address);
 
     pthread_t tid;
     pthread_create(&tid, NULL, readPackets, (void *)&tid);
@@ -212,12 +206,12 @@ int main(int argc, char *argv[]){
             printf("Destination id: ");
             scanf("%d", &dest_id);
 
-            char msg[20];
+            char msg[100];
             printf("Message: ");
             scanf("%s", msg);
 
-            uint8_t destination[4] =  {127,0,0,1};//{10,32,143,255};
-            send_package(2, msg, destination);
+            // uint8_t destination[4] =  {127,0,0,1};//{10,32,143,255};
+            send_package(2, msg, table[dest_id].ip_address);
         }
         else if(input == 3){
             break;
@@ -227,7 +221,7 @@ int main(int argc, char *argv[]){
 }
 
 
-int send_package(int packege_type, char msg[100], uint8_t destination[4])
+int send_package(uint8_t packege_type, char msg[100], uint8_t destination[4])
 {
     struct ifreq if_idx, if_mac, ifopts;
     struct sockaddr_ll socket_address;
